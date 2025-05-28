@@ -13,11 +13,11 @@ export default function Login() {
     // TODO: Call backend API for login, passing email, password, and role
     console.log({ email, password, role });
 
-    // For demo, redirect based on role
+    // Redirect based on role
     if (role === 'admin') {
-      navigate('/admin');  // You will create admin routes later
+      navigate('/admin');  // You can add this route later
     } else {
-      navigate('/'); // User home page
+      navigate('/home');   // Redirects users to the Home page
     }
   };
 

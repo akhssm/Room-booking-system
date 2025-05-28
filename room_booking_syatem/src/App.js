@@ -16,8 +16,8 @@ function App() {
 
         <main className="flex-grow container mx-auto p-4">
           <Routes>
-            {/* Home route */}
-            <Route path="/" element={<Home />} />
+            {/* Redirect default route to /login */}
+            <Route path="/" element={<Navigate to="/login" />} />
 
             {/* Login route */}
             <Route path="/login" element={<Login />} />
@@ -25,8 +25,11 @@ function App() {
             {/* Register route */}
             <Route path="/register" element={<Register />} />
 
-            {/* Redirect unknown routes to home */}
-            <Route path="*" element={<Navigate to="/" />} />
+            {/* Home route after login */}
+            <Route path="/home" element={<Home />} />
+
+            {/* Redirect unknown routes to /login */}
+            <Route path="*" element={<Navigate to="/login" />} />
           </Routes>
         </main>
 
