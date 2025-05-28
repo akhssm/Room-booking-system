@@ -1,74 +1,86 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
-export default function Login() {
+export default function Login({ setUserRole }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('user'); // default role
+  const [role, setRole] = useState('user');
   const navigate = useNavigate();
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // TODO: Call backend API for login, passing email, password, and role
-    console.log({ email, password, role });
+    // Log credentials (for dev/testing only)
+    console.log('Login details:', { email, password, role });
 
-    // Redirect based on role
-    if (role === 'admin') {
-      navigate('/admin');  // You can add this route later
-    } else {
-      navigate('/home');   // Redirects users to the Home page
+    // Optional: set user role globally (for Home to show admin UI)
+    if (setUserRole) {
+      setUserRole(role);
     }
+
+    // Redirect both roles to /home
+    navigate('/home');
   };
 
   return (
-    <div className="max-w-md mx-auto bg-white p-6 rounded shadow">
-      <h2 className="text-2xl font-bold mb-6 text-center">Login</h2>
+    <div className="max-w-md mx-auto bg-white p-6 rounded shadow mt-12">
+      <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">Login</h2>
+      
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Email Field */}
         <div>
-          <label className="block mb-1 font-semibold">Email</label>
+          <label htmlFor="email" className="block mb-1 font-medium text-gray-700">Email</label>
           <input
+            id="email"
             type="email"
             required
             value={email}
-            onChange={e => setEmail(e.target.value)}
-            className="w-full border p-2 rounded"
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full border border-gray-300 p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="you@example.com"
           />
         </div>
 
+        {/* Password Field */}
         <div>
-          <label className="block mb-1 font-semibold">Password</label>
+          <label htmlFor="password" className="block mb-1 font-medium text-gray-700">Password</label>
           <input
+            id="password"
             type="password"
             required
             value={password}
-            onChange={e => setPassword(e.target.value)}
-            className="w-full border p-2 rounded"
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full border border-gray-300 p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="••••••••"
           />
         </div>
 
+        {/* Role Selector */}
         <div>
-          <label className="block mb-1 font-semibold">Role</label>
+          <label htmlFor="role" className="block mb-1 font-medium text-gray-700">Login as</label>
           <select
+            id="role"
             value={role}
-            onChange={e => setRole(e.target.value)}
-            className="w-full border p-2 rounded"
+            onChange={(e) => setRole(e.target.value)}
+            className="w-full border border-gray-300 p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="user">User</option>
             <option value="admin">Admin</option>
           </select>
         </div>
 
+        {/* Submit Button */}
         <button
           type="submit"
-          className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
+          className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 transition duration-200"
         >
           Login
         </button>
       </form>
-      <p className="mt-4 text-center">
+
+      <p className="mt-4 text-center text-gray-600">
         Don't have an account?{' '}
-        <Link to="/register" className="text-blue-600 hover:underline">
+        <Link to="/register" className="text-blue-600 hover:underline font-medium">
           Register here
         </Link>
       </p>
