@@ -24,6 +24,9 @@ export default function Header() {
           <Link to="/home" className="bg-white text-blue-600 px-4 py-2 rounded hover:bg-gray-100">
             Home
           </Link>
+          <Link to="/rooms" className="bg-white text-blue-600 px-4 py-2 rounded hover:bg-gray-100">
+            Rooms
+          </Link>
           <button
             onClick={handleLogout}
             className="bg-white text-blue-600 px-4 py-2 rounded hover:bg-gray-100"
