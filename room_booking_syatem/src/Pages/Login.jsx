@@ -1,7 +1,8 @@
+// Login.jsx
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
-export default function Login({ setUserRole }) {
+export default function Login({ setUser }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('user');
@@ -10,15 +11,14 @@ export default function Login({ setUserRole }) {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // Log credentials (for dev/testing only)
-    console.log('Login details:', { email, password, role });
+    // For demonstration purposes
+    const name = email.split('@')[0];
 
-    // Optional: set user role globally (for Home to show admin UI)
-    if (setUserRole) {
-      setUserRole(role);
+    // Set user object
+    if (setUser) {
+      setUser({ name, email, role });
     }
 
-    // Redirect both roles to /home
     navigate('/home');
   };
 
@@ -27,7 +27,6 @@ export default function Login({ setUserRole }) {
       <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">Login</h2>
       
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Email Field */}
         <div>
           <label htmlFor="email" className="block mb-1 font-medium text-gray-700">Email</label>
           <input
@@ -41,7 +40,6 @@ export default function Login({ setUserRole }) {
           />
         </div>
 
-        {/* Password Field */}
         <div>
           <label htmlFor="password" className="block mb-1 font-medium text-gray-700">Password</label>
           <input
@@ -55,7 +53,6 @@ export default function Login({ setUserRole }) {
           />
         </div>
 
-        {/* Role Selector */}
         <div>
           <label htmlFor="role" className="block mb-1 font-medium text-gray-700">Login as</label>
           <select
@@ -69,7 +66,6 @@ export default function Login({ setUserRole }) {
           </select>
         </div>
 
-        {/* Submit Button */}
         <button
           type="submit"
           className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 transition duration-200"

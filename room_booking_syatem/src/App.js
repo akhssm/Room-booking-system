@@ -13,7 +13,7 @@ import SearchPage from './Pages/SearchPage';
 
 function App() {
   const [bookedRooms, setBookedRooms] = useState([]);
-  const [userRole, setUserRole] = useState(null); // NEW: user role
+  const [user, setUser] = useState(null); // Updated from just userRole
 
   const handleBookRoom = (newBooking) => {
     const bookingWithId = {
@@ -32,14 +32,11 @@ function App() {
         <main className="flex-grow container mx-auto p-4">
           <Routes>
             <Route path="/" element={<Navigate to="/login" replace />} />
-
-            <Route path="/login" element={<Login setUserRole={setUserRole} />} />
+            <Route path="/login" element={<Login setUser={setUser} />} />
             <Route path="/register" element={<Register />} />
-
-            <Route path="/home" element={<Home userRole={userRole} />} />
-            <Route path="/rooms" element={<Rooms bookedRooms={bookedRooms} />} />
+            <Route path="/home" element={<Home userRole={user?.role} />} />
+            <Route path="/rooms" element={<Rooms bookedRooms={bookedRooms} user={user} />} />
             <Route path="/search" element={<SearchPage onBook={handleBookRoom} />} />
-
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </main>
