@@ -1,15 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
-export default function Rooms({ bookedRooms, user = {} }) {
-  user = user ?? {};
-
+export default function Rooms({ bookedRooms = [], user = {} }) {
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const shouldShowForm = queryParams.get('create') === 'true';
 
   const [showCreateForm, setShowCreateForm] = useState(shouldShowForm || user.role === 'admin');
-
   const [createdRooms, setCreatedRooms] = useState(() => {
     const stored = localStorage.getItem('createdRooms');
     return stored ? JSON.parse(stored) : [];
@@ -26,7 +23,6 @@ export default function Rooms({ bookedRooms, user = {} }) {
 
   const [editingRoomId, setEditingRoomId] = useState(null);
 
-  // Sync createdRooms to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('createdRooms', JSON.stringify(createdRooms));
   }, [createdRooms]);
@@ -34,57 +30,30 @@ export default function Rooms({ bookedRooms, user = {} }) {
   const handleFormSubmit = (e) => {
     e.preventDefault();
 
-    if (formData.startTime >= formData.endTime) {
-      alert('End time must be after start time.');
-      return;
-    }
-
-    if (!formData.date) {
-      alert('Please select a date.');
-      return;
-    }
+    if (!formData.date) return alert('Please select a date.');
+    if (formData.startTime >= formData.endTime) return alert('End time must be after start time.');
 
     if (editingRoomId) {
-      // Edit room
       setCreatedRooms((prev) =>
         prev.map((room) =>
           room.id === editingRoomId
-            ? {
-                ...room,
-                name: formData.name,
-                capacity: formData.capacity,
-                date: formData.date,
-                time: `${formData.startTime} - ${formData.endTime}`,
-                location: formData.location,
-              }
+            ? { ...room, ...formData, time: `${formData.startTime} - ${formData.endTime}` }
             : room
         )
       );
       alert('Room updated successfully!');
     } else {
-      // Create new room
       const newRoom = {
         id: Date.now(),
-        name: formData.name,
-        capacity: formData.capacity,
-        date: formData.date,
+        ...formData,
         time: `${formData.startTime} - ${formData.endTime}`,
-        location: formData.location,
         createdBy: user.name || 'Unknown',
       };
       setCreatedRooms((prev) => [...prev, newRoom]);
       alert('Room created successfully!');
     }
 
-    setFormData({
-      name: '',
-      capacity: '',
-      date: '',
-      startTime: '',
-      endTime: '',
-      location: '',
-    });
-    setEditingRoomId(null);
+    resetForm();
   };
 
   const handleEdit = (room) => {
@@ -103,21 +72,16 @@ export default function Rooms({ bookedRooms, user = {} }) {
   const handleDelete = (id) => {
     if (window.confirm('Are you sure you want to delete this room?')) {
       setCreatedRooms((prev) => prev.filter((room) => room.id !== id));
-      if (editingRoomId === id) {
-        setFormData({
-          name: '',
-          capacity: '',
-          date: '',
-          startTime: '',
-          endTime: '',
-          location: '',
-        });
-        setEditingRoomId(null);
-      }
+      if (editingRoomId === id) resetForm();
     }
   };
 
-  const handleCancelEdit = () => {
+  const handleBookRoom = (room) => {
+    alert(`You booked room: ${room.name}`);
+    // Add your actual booking logic here (e.g., update bookedRooms or call an API)
+  };
+
+  const resetForm = () => {
     setFormData({
       name: '',
       capacity: '',
@@ -192,16 +156,13 @@ export default function Rooms({ bookedRooms, user = {} }) {
           />
 
           <div className="flex space-x-2">
-            <button
-              type="submit"
-              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-            >
+            <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
               {editingRoomId ? 'Update Room' : 'Submit Room'}
             </button>
             {editingRoomId && (
               <button
                 type="button"
-                onClick={handleCancelEdit}
+                onClick={resetForm}
                 className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
               >
                 Cancel Edit
@@ -229,18 +190,29 @@ export default function Rooms({ bookedRooms, user = {} }) {
                   <div><strong>Created By:</strong> {room.createdBy}</div>
                 </div>
                 <div className="space-x-2">
-                  <button
-                    onClick={() => handleEdit(room)}
-                    className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(room.id)}
-                    className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
-                  >
-                    Delete
-                  </button>
+                  {user.role === 'admin' ? (
+                    <>
+                      <button
+                        onClick={() => handleEdit(room)}
+                        className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(room.id)}
+                        className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
+                      >
+                        Delete
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => handleBookRoom(room)}
+                      className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                    >
+                      Book Room
+                    </button>
+                  )}
                 </div>
               </li>
             ))}
