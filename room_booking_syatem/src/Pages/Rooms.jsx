@@ -5,7 +5,8 @@ import BookingForm from '../Components/BookingForm';
 export default function Rooms({ initialBookedRooms = [], user = {} }) {
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
-  const shouldShowForm = queryParams.get('create') === 'true';
+  // Match query param key with the one used in Home.jsx for consistency
+  const shouldShowForm = queryParams.get('openCreateForm') === 'true';
 
   const [showCreateForm, setShowCreateForm] = useState(shouldShowForm || user?.role === 'admin');
   const [createdRooms, setCreatedRooms] = useState(() => {
@@ -13,7 +14,6 @@ export default function Rooms({ initialBookedRooms = [], user = {} }) {
     return stored ? JSON.parse(stored) : [];
   });
 
-  // NEW: bookedRooms state inside component
   const [bookedRooms, setBookedRooms] = useState(initialBookedRooms);
 
   const [formData, setFormData] = useState({
@@ -42,7 +42,12 @@ export default function Rooms({ initialBookedRooms = [], user = {} }) {
       setCreatedRooms((prev) =>
         prev.map((room) =>
           room.id === editingRoomId
-            ? { ...room, ...formData, capacity: Number(formData.capacity), time: `${formData.startTime} - ${formData.endTime}` }
+            ? {
+                ...room,
+                ...formData,
+                capacity: Number(formData.capacity),
+                time: `${formData.startTime} - ${formData.endTime}`,
+              }
             : room
         )
       );
@@ -103,10 +108,9 @@ export default function Rooms({ initialBookedRooms = [], user = {} }) {
     setBookingRoom(null);
   };
 
-  // NEW: On booking submit, add to bookedRooms state
   const handleBookingSubmit = (bookingData) => {
     const bookedRoom = {
-      id: bookingData.roomId || Date.now(),
+      id: Date.now(),
       name: bookingData.roomName,
       number: bookingData.number,
       bookedBy: bookingData.name,
@@ -264,13 +268,13 @@ export default function Rooms({ initialBookedRooms = [], user = {} }) {
       ) : (
         <ul className="space-y-2">
           {bookedRooms.map((room) => (
-            <li key={room.id} className="border p-4 rounded bg-white shadow">
-              <div><strong>Name:</strong> {room.name}</div>
-              <div><strong>Number:</strong> {room.number}</div>
-              <div><strong>Time:</strong> {room.time}</div>
+            <li key={room.id} className="border p-4 rounded bg-gray-50 shadow">
+              <div><strong>Room Name:</strong> {room.name}</div>
+              <div><strong>Room Number:</strong> {room.number}</div>
               <div><strong>Booked By:</strong> {room.bookedBy}</div>
               <div><strong>Purpose:</strong> {room.purpose}</div>
               <div><strong>Status:</strong> {room.status}</div>
+              <div><strong>Time Slot:</strong> {room.time}</div>
             </li>
           ))}
         </ul>

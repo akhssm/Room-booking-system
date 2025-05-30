@@ -1,5 +1,4 @@
-// src/Pages/Home.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SearchRooms from '../Components/SearchRooms';
 import RoomList from '../Components/RoomList';
@@ -8,30 +7,15 @@ import BookingForm from '../Components/BookingForm';
 export default function Home({ userRole }) {
   const navigate = useNavigate();
 
-  // Example rooms with available time slots per day (for demonstration)
-  const [rooms, setRooms] = useState([
-    {
-      id: 1,
-      name: 'Room A',
-      capacity: 10,
-      location: '1st Floor',
-      // availability: Array of objects with date and time ranges room is free
-      availability: [
-        { date: '2025-05-29', startTime: '09:00', endTime: '12:00' },
-        { date: '2025-05-30', startTime: '10:00', endTime: '14:00' },
-      ],
-    },
-    {
-      id: 2,
-      name: 'Room B',
-      capacity: 20,
-      location: '2nd Floor',
-      availability: [
-        { date: '2025-05-29', startTime: '13:00', endTime: '17:00' },
-        { date: '2025-05-30', startTime: '09:00', endTime: '11:00' },
-      ],
-    },
-  ]);
+  // Instead of hardcoded rooms, load from localStorage (same as Rooms page)
+  const [rooms, setRooms] = useState([]);
+
+  useEffect(() => {
+    const storedRooms = localStorage.getItem('createdRooms');
+    if (storedRooms) {
+      setRooms(JSON.parse(storedRooms));
+    }
+  }, []);
 
   const [availableRooms, setAvailableRooms] = useState([]);
   const [selectedRoom, setSelectedRoom] = useState(null);
@@ -43,6 +27,7 @@ export default function Home({ userRole }) {
   };
 
   // Check if search time range fits inside room availability time range
+  // Your Rooms store time as a string like "09:00 - 12:00"
   const isTimeRangeWithin = (searchStart, searchEnd, availStart, availEnd) => {
     return (
       timeToMinutes(searchStart) >= timeToMinutes(availStart) &&
@@ -54,24 +39,14 @@ export default function Home({ userRole }) {
     console.log('Searching rooms for:', date, startTime, endTime);
 
     const filtered = rooms.filter((room) => {
-      // Find availability for the searched date
-      const availabilityForDate = room.availability.find(
-        (slot) => slot.date === date
-      );
-      if (!availabilityForDate) {
-        // No availability on that date, exclude room
+      // Each room has a single date and time slot (not an array)
+      if (room.date !== date) {
         return false;
       }
 
-      // Check if requested time fits in availability
-      const isAvailable = isTimeRangeWithin(
-        startTime,
-        endTime,
-        availabilityForDate.startTime,
-        availabilityForDate.endTime
-      );
+      const [availStart, availEnd] = room.time.split(' - ');
 
-      return isAvailable;
+      return isTimeRangeWithin(startTime, endTime, availStart, availEnd);
     });
 
     setAvailableRooms(filtered);
