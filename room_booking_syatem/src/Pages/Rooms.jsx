@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import BookingForm from '../Components/BookingForm';
 
-export default function Rooms({ bookedRooms = [], user = {} }) {
+export default function Rooms({ initialBookedRooms = [], user = {} }) {
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const shouldShowForm = queryParams.get('create') === 'true';
 
-  const [showCreateForm, setShowCreateForm] = useState(shouldShowForm || user.role === 'admin');
+  const [showCreateForm, setShowCreateForm] = useState(shouldShowForm || user?.role === 'admin');
   const [createdRooms, setCreatedRooms] = useState(() => {
     const stored = localStorage.getItem('createdRooms');
     return stored ? JSON.parse(stored) : [];
   });
+
+  // NEW: bookedRooms state inside component
+  const [bookedRooms, setBookedRooms] = useState(initialBookedRooms);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -22,6 +26,7 @@ export default function Rooms({ bookedRooms = [], user = {} }) {
   });
 
   const [editingRoomId, setEditingRoomId] = useState(null);
+  const [bookingRoom, setBookingRoom] = useState(null);
 
   useEffect(() => {
     localStorage.setItem('createdRooms', JSON.stringify(createdRooms));
@@ -37,7 +42,7 @@ export default function Rooms({ bookedRooms = [], user = {} }) {
       setCreatedRooms((prev) =>
         prev.map((room) =>
           room.id === editingRoomId
-            ? { ...room, ...formData, time: `${formData.startTime} - ${formData.endTime}` }
+            ? { ...room, ...formData, capacity: Number(formData.capacity), time: `${formData.startTime} - ${formData.endTime}` }
             : room
         )
       );
@@ -46,8 +51,9 @@ export default function Rooms({ bookedRooms = [], user = {} }) {
       const newRoom = {
         id: Date.now(),
         ...formData,
+        capacity: Number(formData.capacity),
         time: `${formData.startTime} - ${formData.endTime}`,
-        createdBy: user.name || 'Unknown',
+        createdBy: user?.name || 'Unknown',
       };
       setCreatedRooms((prev) => [...prev, newRoom]);
       alert('Room created successfully!');
@@ -77,8 +83,8 @@ export default function Rooms({ bookedRooms = [], user = {} }) {
   };
 
   const handleBookRoom = (room) => {
-    alert(`You booked room: ${room.name}`);
-    // Add your actual booking logic here (e.g., update bookedRooms or call an API)
+    setBookingRoom(room);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const resetForm = () => {
@@ -91,6 +97,27 @@ export default function Rooms({ bookedRooms = [], user = {} }) {
       location: '',
     });
     setEditingRoomId(null);
+  };
+
+  const handleBookingFormClose = () => {
+    setBookingRoom(null);
+  };
+
+  // NEW: On booking submit, add to bookedRooms state
+  const handleBookingSubmit = (bookingData) => {
+    const bookedRoom = {
+      id: bookingData.roomId || Date.now(),
+      name: bookingData.roomName,
+      number: bookingData.number,
+      bookedBy: bookingData.name,
+      purpose: bookingData.purpose,
+      status: 'Booked',
+      time: createdRooms.find((r) => r.id === bookingData.roomId)?.time || '',
+    };
+
+    setBookedRooms((prev) => [...prev, bookedRoom]);
+    alert(`Room "${bookedRoom.name}" booked by ${bookedRoom.bookedBy}`);
+    setBookingRoom(null);
   };
 
   return (
@@ -113,6 +140,7 @@ export default function Rooms({ bookedRooms = [], user = {} }) {
           <input
             type="number"
             placeholder="Capacity"
+            min={1}
             value={formData.capacity}
             onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
             required
@@ -172,6 +200,15 @@ export default function Rooms({ bookedRooms = [], user = {} }) {
         </form>
       )}
 
+      {bookingRoom && (
+        <BookingForm
+          room={bookingRoom}
+          onSubmit={handleBookingSubmit}
+          onCancel={handleBookingFormClose}
+          user={user}
+        />
+      )}
+
       {createdRooms.length > 0 && (
         <>
           <h2 className="text-xl font-semibold">Created Rooms</h2>
@@ -190,7 +227,7 @@ export default function Rooms({ bookedRooms = [], user = {} }) {
                   <div><strong>Created By:</strong> {room.createdBy}</div>
                 </div>
                 <div className="space-x-2">
-                  {user.role === 'admin' ? (
+                  {user?.role === 'admin' ? (
                     <>
                       <button
                         onClick={() => handleEdit(room)}
@@ -219,6 +256,8 @@ export default function Rooms({ bookedRooms = [], user = {} }) {
           </ul>
         </>
       )}
+
+      <h2 className="text-xl font-semibold mt-8">Booked Rooms List</h2>
 
       {bookedRooms.length === 0 ? (
         <p className="text-gray-500">No rooms booked yet.</p>
