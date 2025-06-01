@@ -575,7 +575,8 @@ export default function Rooms({ user = {} }) {
   );
 
   const [createdRooms, setCreatedRooms] = useState([]);
-  const [bookedRooms, setBookedRooms] = useState([]);
+  const [bookedRooms, setBookedRooms] = useState([]); // This will store ALL bookings
+  const [userBookings, setUserBookings] = useState([]); // NEW: State to store filtered user bookings
 
   const [formData, setFormData] = useState({
     name: '',
@@ -608,7 +609,7 @@ export default function Rooms({ user = {} }) {
         const bookingsRes = await fetch(`${API_BASE_URL}/bookings`);
         if (!bookingsRes.ok) throw new Error('Failed to fetch bookings');
         const bookingsData = await bookingsRes.json();
-        setBookedRooms(bookingsData);
+        setBookedRooms(bookingsData); // Store all bookings
       } catch (error) {
         console.error('Error fetching bookings:', error);
         alert(`Error fetching bookings: ${error.message}`);
@@ -618,6 +619,18 @@ export default function Rooms({ user = {} }) {
     fetchRooms();
     fetchBookings();
   }, []);
+
+  // NEW: Filter bookings whenever bookedRooms or user changes
+  useEffect(() => {
+    if (user?.name) {
+      const filtered = bookedRooms.filter(
+        (booking) => booking.bookedBy === user.name
+      );
+      setUserBookings(filtered);
+    } else {
+      setUserBookings([]); // Clear user bookings if no user is logged in
+    }
+  }, [bookedRooms, user]);
 
   const resetForm = () => {
     setFormData({
@@ -634,7 +647,6 @@ export default function Rooms({ user = {} }) {
   const handleFormChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
-
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
@@ -803,10 +815,11 @@ export default function Rooms({ user = {} }) {
         const errorData = await res.json().catch(() => ({ message: 'No error message from server.' }));
         throw new Error(`Failed to book room: ${errorData.message || res.statusText}`);
       }
-      const bookedRoom = await res.json();
+      const newBooking = await res.json(); // Renamed from bookedRoom to newBooking for clarity
 
-      setBookedRooms((prev) => [...prev, bookedRoom]);
-      alert(`Room "${bookedRoom.roomName}" booked by ${bookedRoom.bookerName} successfully!`); // Use bookerName from the response
+      // Update the main bookedRooms state, which will trigger the filtering effect
+      setBookedRooms((prev) => [...prev, newBooking]);
+      alert(`Room "${newBooking.roomName}" booked by ${newBooking.bookerName} successfully!`);
       setBookingRoom(null);
     } catch (error) {
       console.error('Error during booking submission:', error);
@@ -823,6 +836,7 @@ export default function Rooms({ user = {} }) {
         const errorData = await res.json().catch(() => ({ message: 'No error message from server.' }));
         throw new Error(`Failed to cancel booking: ${errorData.message || res.statusText}`);
       }
+      // Update the main bookedRooms state, which will trigger the filtering effect
       setBookedRooms((prev) => prev.filter((booking) => booking.id !== id));
       alert('Booking canceled successfully!');
     } catch (error) {
@@ -839,6 +853,7 @@ export default function Rooms({ user = {} }) {
         throw new Error(`Failed to confirm booking: ${errorData.message || res.statusText}`);
       }
       const updatedBooking = await res.json();
+      // Update the main bookedRooms state, which will trigger the filtering effect
       setBookedRooms((prev) =>
         prev.map((booking) => (booking.id === id ? updatedBooking : booking))
       );
@@ -1020,12 +1035,14 @@ export default function Rooms({ user = {} }) {
       )}
 
       {/* Booked Rooms List */}
-      <h2 className="text-2xl font-bold mt-8">Booked Rooms</h2>
+      <h2 className="text-2xl font-bold mt-8">
+        {user?.role === 'admin' ? 'All Booked Rooms' : 'My Booked Rooms'}
+      </h2>
       <div className="space-y-2">
-        {bookedRooms.length === 0 ? (
+        {(user?.role === 'admin' ? bookedRooms : userBookings).length === 0 ? (
           <p>No rooms booked yet.</p>
         ) : (
-          bookedRooms.map((booking) => (
+          (user?.role === 'admin' ? bookedRooms : userBookings).map((booking) => (
             <div
               key={booking.id}
               className={`border rounded p-3 bg-white flex justify-between items-center ${

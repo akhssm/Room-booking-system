@@ -7,20 +7,23 @@ export default function Header() {
   const location = useLocation();
 
   const handleLogout = () => {
-    // Clear login info if needed
     console.log("Logged out");
     navigate('/login');
   };
 
-  // Paths where buttons should NOT be shown
   const hideButtons = location.pathname === '/login' || location.pathname === '/register';
 
   return (
     <header className="bg-blue-600 text-white p-4 flex justify-between items-center">
-      <h1 className="text-2xl font-bold">Room Booking System</h1>
+      {/* Empty div for left alignment (optional if you want perfect centering) */}
+      <div className="w-1/3"></div>
 
-      {!hideButtons && (
-        <div className="space-x-4">
+      {/* Centered Title */}
+      <h1 className="text-2xl font-bold text-center w-1/3">Room Booking System</h1>
+
+      {/* Right-aligned buttons */}
+      {!hideButtons ? (
+        <div className="space-x-4 w-1/3 flex justify-end">
           <Link to="/home" className="bg-white text-blue-600 px-4 py-2 rounded hover:bg-gray-100">
             Home
           </Link>
@@ -34,6 +37,8 @@ export default function Header() {
             Logout
           </button>
         </div>
+      ) : (
+        <div className="w-1/3"></div>
       )}
     </header>
   );
