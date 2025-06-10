@@ -569,19 +569,18 @@ export default function Rooms({ user = {} }) {
   const shouldShowForm = queryParams.get('openCreateForm') === 'true';
 
   // State to control visibility of the create/edit room form
-  // Only show by default if navigated with query param or if user is admin
-  const [showCreateForm, setShowCreateForm] = useState(
-    shouldShowForm || user?.role === 'admin'
-  );
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   const [createdRooms, setCreatedRooms] = useState([]);
   const [bookedRooms, setBookedRooms] = useState([]); // This will store ALL bookings
-  const [userBookings, setUserBookings] = useState([]); // NEW: State to store filtered user bookings
+  const [userBookings, setUserBookings] = useState([]); // State to store filtered user bookings
+
+  // NEW STATE: For filtering by date
+  const [filterDate, setFilterDate] = useState(''); // Stores the selected date for filtering
 
   const [formData, setFormData] = useState({
     name: '',
     capacity: '',
-    date: '',
     startTime: '',
     endTime: '',
     location: '',
@@ -618,6 +617,14 @@ export default function Rooms({ user = {} }) {
 
     fetchRooms();
     fetchBookings();
+
+    // Set initial filter date to today's date
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
+    const day = String(today.getDate()).padStart(2, '0');
+    setFilterDate(`${year}-${month}-${day}`);
+
   }, []);
 
   // NEW: Filter bookings whenever bookedRooms or user changes
@@ -636,7 +643,6 @@ export default function Rooms({ user = {} }) {
     setFormData({
       name: '',
       capacity: '',
-      date: '',
       startTime: '',
       endTime: '',
       location: '',
@@ -653,11 +659,6 @@ export default function Rooms({ user = {} }) {
 
     if (!formData.name.trim()) {
       alert('Room Name cannot be empty.');
-      return;
-    }
-
-    if (!formData.date) {
-      alert('Please select a date.');
       return;
     }
 
@@ -685,7 +686,6 @@ export default function Rooms({ user = {} }) {
     const roomPayload = {
       name: formData.name.trim(),
       capacity: capacityNumber,
-      date: formData.date,
       startTime: formData.startTime,
       endTime: formData.endTime,
       time: `${formData.startTime} - ${formData.endTime}`, // Combined time string
@@ -739,18 +739,17 @@ export default function Rooms({ user = {} }) {
   };
 
   const handleEdit = (room) => {
-    // Make sure 'room.time' exists before splitting
     const [startTime, endTime] = room.time ? room.time.split(' - ') : ['', ''];
 
     setFormData({
       name: room.name,
       capacity: String(room.capacity),
-      date: room.date || '',
       startTime: startTime,
       endTime: endTime,
       location: room.location,
     });
     setEditingRoomId(room.id);
+    setShowCreateForm(true); // Show the form when editing
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -792,15 +791,16 @@ export default function Rooms({ user = {} }) {
 
       const bookingPayload = {
         roomId: bookingData.roomId,
-        roomName: room.name, // Add roomName from the selected room
-        bookerName: bookingData.name, // This is the user's name from the form
+        roomName: room.name,
+        bookerName: bookingData.name,
         bookerNumber: bookingData.number,
         purpose: bookingData.purpose,
-        status: 'Booked', // Default status for new bookings
-        bookingTime: room.time || '', // Populate bookingTime from the selected room's 'time' property
-        bookedBy: user?.name || 'Unknown', // The logged-in user who initiates the booking
-        paymentMethod: bookingData.paymentMethod, // NEW: Add payment method
-        paymentDetails: bookingData.paymentDetails, // NEW: Add payment details
+        status: 'Booked',
+        bookingTime: room.time, // Use the room's defined time
+        bookingDate: bookingData.bookingDate, // Specific date from BookingForm
+        bookedBy: user?.name || 'Unknown',
+        paymentMethod: bookingData.paymentMethod,
+        paymentDetails: bookingData.paymentDetails,
       };
 
       console.log('Sending booking payload:', bookingPayload);
@@ -815,10 +815,9 @@ export default function Rooms({ user = {} }) {
         const errorData = await res.json().catch(() => ({ message: 'No error message from server.' }));
         throw new Error(`Failed to book room: ${errorData.message || res.statusText}`);
       }
-      const newBooking = await res.json(); // Renamed from bookedRoom to newBooking for clarity
+      const newBooking = await res.json();
 
-      // Update the main bookedRooms state, which will trigger the filtering effect
-      setBookedRooms((prev) => [...prev, newBooking]);
+      setBookedRooms((prev) => [...prev, newBooking]); // Update all bookings
       alert(`Room "${newBooking.roomName}" booked by ${newBooking.bookerName} successfully!`);
       setBookingRoom(null);
     } catch (error) {
@@ -836,7 +835,6 @@ export default function Rooms({ user = {} }) {
         const errorData = await res.json().catch(() => ({ message: 'No error message from server.' }));
         throw new Error(`Failed to cancel booking: ${errorData.message || res.statusText}`);
       }
-      // Update the main bookedRooms state, which will trigger the filtering effect
       setBookedRooms((prev) => prev.filter((booking) => booking.id !== id));
       alert('Booking canceled successfully!');
     } catch (error) {
@@ -853,7 +851,6 @@ export default function Rooms({ user = {} }) {
         throw new Error(`Failed to confirm booking: ${errorData.message || res.statusText}`);
       }
       const updatedBooking = await res.json();
-      // Update the main bookedRooms state, which will trigger the filtering effect
       setBookedRooms((prev) =>
         prev.map((booking) => (booking.id === id ? updatedBooking : booking))
       );
@@ -864,17 +861,36 @@ export default function Rooms({ user = {} }) {
     }
   };
 
+  // NEW: Filtered lists based on selected date
+  const filteredBookings = bookedRooms.filter(booking =>
+    filterDate ? booking.bookingDate === filterDate : true // Filter if filterDate is set
+  );
+
+  const filteredUserBookings = userBookings.filter(booking =>
+    filterDate ? booking.bookingDate === filterDate : true // Filter if filterDate is set
+  );
+
+
   return (
     <div className="p-4 space-y-4">
-      <h1 className="text-2xl font-bold">Rooms Management</h1> {/* Changed heading */}
+      <h1 className="text-2xl font-bold">Rooms Management</h1>
 
-      {/* Conditional rendering for Admin-specific UI */}
       {user?.role === 'admin' && (
         <>
+          <button
+            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+            onClick={() => {
+              setShowCreateForm((prev) => !prev);
+              resetForm();
+            }}
+          >
+            {showCreateForm ? 'Hide Room Form' : 'Add New Room'}
+          </button>
+
           {showCreateForm && (
             <form
               onSubmit={handleFormSubmit}
-              className="border p-4 rounded bg-gray-100 space-y-4"
+              className="border p-4 rounded bg-gray-100 space-y-4 mt-4"
             >
               <h2 className="text-xl font-semibold">
                 {editingRoomId ? 'Edit Room' : 'Create New Room'}
@@ -882,7 +898,7 @@ export default function Rooms({ user = {} }) {
 
               <input
                 type="text"
-                name="name" // Added name attribute
+                name="name"
                 placeholder="Room Name"
                 value={formData.name}
                 onChange={handleFormChange}
@@ -892,7 +908,7 @@ export default function Rooms({ user = {} }) {
 
               <input
                 type="number"
-                name="capacity" // Added name attribute
+                name="capacity"
                 placeholder="Capacity"
                 min={1}
                 value={formData.capacity}
@@ -901,33 +917,22 @@ export default function Rooms({ user = {} }) {
                 className="w-full p-2 border rounded"
               />
 
-              <label htmlFor="date" className="block font-medium">Date</label> {/* Added htmlFor */}
-              <input
-                type="date"
-                id="date" // Added id
-                name="date" // Added name attribute
-                value={formData.date}
-                onChange={handleFormChange}
-                required
-                className="w-full p-2 border rounded"
-              />
-
-              <label htmlFor="startTime" className="block font-medium">Start Time</label> {/* Added htmlFor */}
+              <label htmlFor="startTime" className="block font-medium">Start Time (Daily Availability)</label>
               <input
                 type="time"
-                id="startTime" // Added id
-                name="startTime" // Added name attribute
+                id="startTime"
+                name="startTime"
                 value={formData.startTime}
                 onChange={handleFormChange}
                 required
                 className="w-full p-2 border rounded"
               />
 
-              <label htmlFor="endTime" className="block font-medium">End Time</label> {/* Added htmlFor */}
+              <label htmlFor="endTime" className="block font-medium">End Time (Daily Availability)</label>
               <input
                 type="time"
-                id="endTime" // Added id
-                name="endTime" // Added name attribute
+                id="endTime"
+                name="endTime"
                 value={formData.endTime}
                 onChange={handleFormChange}
                 required
@@ -936,7 +941,7 @@ export default function Rooms({ user = {} }) {
 
               <input
                 type="text"
-                name="location" // Added name attribute
+                name="location"
                 placeholder="Location"
                 value={formData.location}
                 onChange={handleFormChange}
@@ -964,18 +969,25 @@ export default function Rooms({ user = {} }) {
               </div>
             </form>
           )}
-
-          <button
-            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-            onClick={() => setShowCreateForm((prev) => !prev)}
-          >
-            {showCreateForm ? 'Hide Room Form' : 'Add New Room'}
-          </button>
         </>
       )}
 
-      {/* List of Created Rooms - Rendered differently for Admin vs User */}
-      <h2 className="text-2xl font-bold mt-8">Available Rooms</h2>
+      {/* Date Filter Input */}
+      <div className="mt-6 p-4 border rounded bg-white">
+        <label htmlFor="filterDate" className="block text-lg font-semibold mb-2">
+          Filter by Date:
+        </label>
+        <input
+          type="date"
+          id="filterDate"
+          value={filterDate}
+          onChange={(e) => setFilterDate(e.target.value)}
+          className="w-full p-2 border rounded text-lg"
+        />
+      </div>
+
+      {/* List of Created Rooms - Not directly filtered by date here, as they are universally available */}
+      <h2 className="text-2xl font-bold mt-8">Available Rooms (General Daily Availability)</h2>
       <div className="space-y-4">
         {createdRooms.length === 0 ? (
           <p>No rooms created yet.</p>
@@ -988,8 +1000,7 @@ export default function Rooms({ user = {} }) {
               <div>
                 <h3 className="font-semibold text-lg">{room.name}</h3>
                 <p>Capacity: {room.capacity}</p>
-                <p>Date: {room.date || 'N/A'}</p>
-                <p>Time: {room.time || 'N/A'}</p>
+                <p>Available Time: {room.time || 'N/A'}</p>
                 <p>Location: {room.location}</p>
                 <p>Created By: {room.createdBy}</p>
               </div>
@@ -1010,7 +1021,6 @@ export default function Rooms({ user = {} }) {
                     </button>
                   </>
                 ) : (
-                  // Only show Book button for non-admin users
                   <button
                     className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
                     onClick={() => handleBookRoom(room)}
@@ -1034,15 +1044,16 @@ export default function Rooms({ user = {} }) {
         />
       )}
 
-      {/* Booked Rooms List */}
+      {/* Booked Rooms List (Filtered by date) */}
       <h2 className="text-2xl font-bold mt-8">
         {user?.role === 'admin' ? 'All Booked Rooms' : 'My Booked Rooms'}
+        {filterDate && ` for ${filterDate}`} {/* Display filter date */}
       </h2>
       <div className="space-y-2">
-        {(user?.role === 'admin' ? bookedRooms : userBookings).length === 0 ? (
-          <p>No rooms booked yet.</p>
+        {(user?.role === 'admin' ? filteredBookings : filteredUserBookings).length === 0 ? (
+          <p>No rooms booked for the selected date yet.</p>
         ) : (
-          (user?.role === 'admin' ? bookedRooms : userBookings).map((booking) => (
+          (user?.role === 'admin' ? filteredBookings : filteredUserBookings).map((booking) => (
             <div
               key={booking.id}
               className={`border rounded p-3 bg-white flex justify-between items-center ${
@@ -1054,18 +1065,18 @@ export default function Rooms({ user = {} }) {
               }`}
             >
               <div>
-                <h3 className="font-semibold text-lg">{booking.roomName}</h3> {/* Display roomName */}
+                <h3 className="font-semibold text-lg">{booking.roomName}</h3>
                 <p>Booked By: {booking.bookedBy || 'N/A'}</p>
-                <p>Contact: {booking.bookerName} ({booking.bookerNumber})</p> {/* Combined contact details */}
+                <p>Contact: {booking.bookerName} ({booking.bookerNumber})</p>
                 <p>Purpose: {booking.purpose}</p>
                 <p>Status: {booking.status}</p>
-                <p>Time: {booking.bookingTime || 'N/A'}</p> {/* Changed from 'time' to 'bookingTime' */}
-                <p>Payment Method: {booking.paymentMethod}</p> {/* Display payment method */}
-                <p>Payment Details: {booking.paymentDetails}</p> {/* Display payment details */}
+                <p>Booking Date: {booking.bookingDate || 'N/A'}</p>
+                <p>Booking Time: {booking.bookingTime || 'N/A'}</p>
+                <p>Payment Method: {booking.paymentMethod}</p>
+                <p>Payment Details: {booking.paymentDetails}</p>
               </div>
               <div className="flex gap-2">
                 {user?.role === 'admin' ? (
-                  // Admin actions for bookings
                   <>
                     {booking.status === 'Booked' && (
                       <button
@@ -1083,8 +1094,6 @@ export default function Rooms({ user = {} }) {
                     </button>
                   </>
                 ) : (
-                  // Regular user actions for bookings
-                  // Only allow user to cancel THEIR OWN non-confirmed bookings
                   booking.bookedBy === user?.name && booking.status !== 'Confirmed' && (
                     <button
                       className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
