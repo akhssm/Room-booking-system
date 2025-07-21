@@ -125,13 +125,12 @@ export default function Register() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState('user');
-  const [modalMessage, setModalMessage] = useState(''); // State for modal message
+  const [modalMessage, setModalMessage] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setModalMessage(''); // Clear previous messages
+    setModalMessage('');
 
     if (password !== confirmPassword) {
       setModalMessage("Passwords do not match");
@@ -142,20 +141,19 @@ export default function Register() {
       const response = await axios.post('http://localhost:5000/api/auth/register', {
         email,
         password,
-        role
+        role: 'user' // Fixed role
       });
 
       const data = response.data;
-      console.log('Registration successful response:', data); // Debug log
+      console.log('Registration successful response:', data);
 
       setModalMessage('Registration successful! Please login.');
       setTimeout(() => {
-        setModalMessage(''); // Clear modal after a short delay
-        navigate('/login'); // Navigate after success
-      }, 1500); // Navigate after 1.5 seconds
-
+        setModalMessage('');
+        navigate('/login');
+      }, 1500);
     } catch (error) {
-      console.error('Registration error:', error.response?.data || error.message); // Debug log
+      console.error('Registration error:', error.response?.data || error.message);
       setModalMessage(error.response?.data?.message || 'Registration failed.');
     }
   };
@@ -203,18 +201,8 @@ export default function Register() {
           />
         </div>
 
-        <div>
-          <label htmlFor="role" className="block mb-2 text-sm font-medium text-gray-700">Register as</label>
-          <select
-            id="role"
-            value={role}
-            onChange={e => setRole(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white transition duration-150 ease-in-out"
-          >
-            <option value="user">User</option>
-            <option value="admin">Admin</option>
-          </select>
-        </div>
+        {/* Hidden input to pass "user" role */}
+        <input type="hidden" value="user" />
 
         <button
           type="submit"
